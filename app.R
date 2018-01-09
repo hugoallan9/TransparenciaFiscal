@@ -8,21 +8,35 @@
 #
 
 library(shiny)
+library(dplyr)
+library(openxlsx)
+library(data.table)
+library(ckanr)
+
+
+ckanr_setup(url = "https://datos.minfin.gob.gt/")
+id_ejecucion <- "3635b9c2-5f0e-43ec-b3ce-4a006e029c57"
+sql <- paste0('SELECT DISTINCT "Tipo Gobierno","Entidad"   from \"', id_ejecucion, '"\  WHERE "Tipo Gobierno"=\'ADMINISTRACIÓN CENTRAL\'  ')
+categorias <- ds_search_sql(sql, as = 'table')
+categorias <- categorias$records$Entidad
+
+
+# datos <- as.data.table( read.xlsx('/mnt/Datos/GitHub/Transparencia/ejecucion_mensualizada_2017.xlsx', sheet = 1) )
+# entidades <- datos %>%
+#   select(Entidad,Tipo.Gobierno) %>%
+#   filter(Tipo.Gobierno == "ADMINISTRACIÓN CENTRAL")
+# entidades <- levels( as.factor(entidades[[1]]) )  
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
    # Application title
-   titlePanel("Old Faithful Geyser Data"),
+   titlePanel("Ejecución presupuestaria"),
    
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
-      sidebarPanel(
-         sliderInput("bins",
-                     "Number of bins:",
-                     min = 1,
-                     max = 50,
-                     value = 30)
+    selectInput("Entidad", h4("Seleccione la entidad"),
+                choices = categorias
       ),
       
       # Show a plot of the generated distribution
@@ -36,12 +50,7 @@ ui <- fluidPage(
 server <- function(input, output) {
    
    output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      x    <- faithful[, 2] 
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
       
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
    })
 }
 
