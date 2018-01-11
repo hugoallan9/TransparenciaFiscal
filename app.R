@@ -12,7 +12,10 @@ library(dplyr)
 library(openxlsx)
 library(data.table)
 library(ckanr)
-
+library(htmltools)
+library(funcionesINE)
+Sys.setlocale("LC_ALL","es_GT.utf8")
+anual()
 
 ckanr_setup(url = "https://datos.minfin.gob.gt/")
 id_ejecucion <- "3635b9c2-5f0e-43ec-b3ce-4a006e029c57"
@@ -22,13 +25,7 @@ categorias <- ds_search_sql(sql, as = 'table')
 categorias <- as.list( categorias$records$Entidad )
 
 
-# datos <- as.data.table( read.xlsx('/mnt/Datos/GitHub/Transparencia/ejecucion_mensualizada_2017.xlsx', sheet = 1) )
-# entidades <- datos %>%
-#   select(Entidad,Tipo.Gobierno) %>%
-#   filter(Tipo.Gobierno == "ADMINISTRACIÓN CENTRAL")
-# entidades <- levels( as.factor(entidades[[1]]) )  
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
    
    # Application title
@@ -48,28 +45,14 @@ ui <- fluidPage(
                      choices = c("Unidad ejecutora" = "1",  "Programa" = "2", "Ejecución por mes" = "3" )
       ),
       
-      conditionalPanel(
-        condition = "input.Opcion == '1' ",
-        actionButton('btAccion','Ver las unidades ')
-      ),
+      div(h5(htmlOutput("itemsOpciones"), align = "left"), style = "color:black"),
       
-      conditionalPanel(
-        condition = "input.Opcion == '2' ",
-        actionButton('btAccion','Ver los Programas ')
-      ),
-      
-      conditionalPanel(
-        condition = "input.Opcion == '3' ",
-        actionButton('btAccion','Ver los meses disponibles ')
-      ),
-      
-      uiOutput(outputId = "Opciones")
-      
+      actionButton("hacerGrafica", "Ver información")
+
      ),
 
 
 
-     
       
       # Show a plot of the generated distribution
       mainPanel(
@@ -79,33 +62,78 @@ ui <- fluidPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
    
-  ## keep track of elements inserted and not yet removed
-  inserted <- c()
-  
-  observeEvent(
-    input$btAccion, {
-      btn <- input$btAccion
-      id <- paste0('txt', btn)
-      label_opciones <- ""
-      if(input$Opcion == 1 )
-        label_opciones = "Selecciones las unidades ejecutoras:"
-      else if( input$Opcion == 2 )
-        label_opciones = "Selecciones los programas:"
-      output$Opciones <- renderUI({
-        selectInput("OpcionesLista",label_opciones, c("j"))
-      })
-    }
-  )
-  
-  # consulta_sql = paste0('select distinct "Programa", "Entidad" from "',
-  #                       id_ejecucion, '" where "Entidad" = \'', input$Entidad, "\'")
-  # resultado <- ds_search_sql(consulta_sql, as = 'table')
-  
-   output$distPlot <- renderPlot({
+  output$itemsOpciones <- renderUI({
+    if(input$Opcion == 1){
+      mostrable <-  checkboxGroupInput("unidadesEjecutoras", h5("Seleccione las unidades ejecutoras de su interés:"),
+                                       choices = c("TuUnidad")
+                                       
+                                       )
+    }else if(input$Opcion == 2){
+      consulta_sql = paste0('select distinct "Programa", "Entidad" from "',
+                            id_ejecucion, '" where "Entidad" = \'', input$Entidad , "\'")
+      resultado <- ds_search_sql(consulta_sql, as = 'table')
+      mostrable <-  checkboxGroupInput("programas", h5("Seleccione las unidades ejecutoras de su interés:"),
+                                       choices = resultado$records$Programa
+                                       
+      )
+    }else if(input$Opcion == 3){
+      consulta_sql = paste0('select distinct "Mes", "Entidad" from "',
+                            id_ejecucion, '" where "Entidad" = \'', input$Entidad , "\'")
+      resultado <- ds_search_sql(consulta_sql, as = 'table')
+      mostrable <-  checkboxGroupInput("meses", h5("Seleccione las unidades ejecutoras de su interés:"),
+                                       choices = resultado$records$Mes
+                                       
+      )
       
-   })
+    }
+  return(mostrable)
+  })  
+  
+  inputParaelIn <- function(lista){
+    formato <- ""
+    i <- 0
+    for( x in lista  ){
+      i <- i + 1
+      if ( length(lista) == i ){
+        formato <- paste0(formato,paste0('\'',x, '\''))
+      }else{
+        formato <- paste0(formato,paste0('\'',x, '\', '))  
+      }
+      
+    }
+    return(formato)
+  }
+  
+  retardo <- eventReactive(input$hacerGrafica, {
+    #Acá va la consulta.
+    consulta_sql = ""
+    if(input$Opcion == 1){
+      consulta_sql = "select"
+    }else if( input$Opcion == 2 ){
+      print( inputParaelIn( input$programas ) )
+      consulta_sql = paste0('select "Programa", "Entidad", sum("Devengado") as "Devengado" from  "', id_ejecucion, '" where "Entidad" = \'', input$Entidad,
+      '\' and "Programa" in (',inputParaelIn(input$programas), ') group by "Programa", "Entidad"' )
+      print(consulta_sql)
+      resultado <- ds_search_sql(consulta_sql, as = 'table')
+      print(resultado)
+    }else if( input$Opcion == 3 ){
+      
+    }
+    return(resultado$records)
+    
+  })
+  
+  output$distPlot <- renderPlot({
+    data<- retardo()
+    data[,3] <- sapply(data[,3], as.numeric)
+    g <- graficaBar(data[,c(2,3)])
+    return(g)
+  })
+  
+  
+
 }
 
 # Run the application 
