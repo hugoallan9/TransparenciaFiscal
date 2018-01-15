@@ -15,7 +15,7 @@ library(ckanr)
 library(htmltools)
 library(funcionesINE)
 Sys.setlocale("LC_ALL","es_GT.utf8")
-anual()
+web()
 
 ckanr_setup(url = "https://datos.minfin.gob.gt/")
 id_ejecucion <- "3635b9c2-5f0e-43ec-b3ce-4a006e029c57"
@@ -128,8 +128,9 @@ server <- function(input, output, session) {
   output$distPlot <- renderPlot({
     data<- retardo()
     data[,3] <- sapply(data[,3], as.numeric)
-    g <- graficaBar(data[,c(2,3)])
-    return(g)
+    g <- graficaCol(data[,c(2,3)])
+    g <- etiquetasHorizontales(g)
+    return(retocarGrafica(g))
   })
   
   
