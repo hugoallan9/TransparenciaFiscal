@@ -17,12 +17,13 @@ library(funcionesINE)
 Sys.setlocale("LC_ALL","es_GT.utf8")
 web()
 
-ckanr_setup(url = "https://datos.minfin.gob.gt/")
-id_ejecucion <- "3635b9c2-5f0e-43ec-b3ce-4a006e029c57"
-id_ejecucion2016 <- "c1043a6e-a4af-478a-b06e-ebc2eb0e9a3"
-sql <- paste0('SELECT DISTINCT "Tipo Gobierno","Entidad"   from \"', id_ejecucion, '"\  WHERE "Tipo Gobierno"=\'ADMINISTRACIÓN CENTRAL\'  ')
-categorias <- ds_search_sql(sql, as = 'table')
-categorias <- as.list( categorias$records$Entidad )
+data <- read.csv('Alimentación_para_Transparencia_Fiscal.csv')
+
+
+
+categorias <- levels( data$Entidad )
+  
+
 
 
 
@@ -66,24 +67,30 @@ server <- function(input, output, session) {
    
   output$itemsOpciones <- renderUI({
     if(input$Opcion == 1){
+      resultado <- data %>%
+        distinct( Entidad, Unidad.Ejecutora )%>%
+        filter(Entidad == input$Entidad)
       mostrable <-  checkboxGroupInput("unidadesEjecutoras", h5("Seleccione las unidades ejecutoras de su interés:"),
-                                       choices = c("TuUnidad")
+                                       choices = resultado$Unidad.Ejecutora
                                        
                                        )
     }else if(input$Opcion == 2){
-      consulta_sql = paste0('select distinct "Programa", "Entidad" from "',
-                            id_ejecucion, '" where "Entidad" = \'', input$Entidad , "\'")
-      resultado <- ds_search_sql(consulta_sql, as = 'table')
+      resultado <- data %>%
+        distinct( Entidad, Programa )%>%
+        filter(Entidad == input$Entidad)
       mostrable <-  checkboxGroupInput("programas", h5("Seleccione las unidades ejecutoras de su interés:"),
-                                       choices = resultado$records$Programa
+                                       choices = resultado$Programa  
                                        
       )
     }else if(input$Opcion == 3){
-      consulta_sql = paste0('select distinct "Mes", "Entidad" from "',
-                            id_ejecucion, '" where "Entidad" = \'', input$Entidad , "\'")
-      resultado <- ds_search_sql(consulta_sql, as = 'table')
+      # consulta_sql = paste0('select distinct "Mes", "Entidad" from "',
+      #                       id_ejecucion, '" where "Entidad" = \'', input$Entidad , "\'")
+      # resultado <- ds_search_sql(consulta_sql, as = 'table')
+      resultado <- data %>%
+        distinct( Entidad, Nombre.Mes ) %>%
+        filter( Entidad == input$Entidad )
       mostrable <-  checkboxGroupInput("meses", h5("Seleccione las unidades ejecutoras de su interés:"),
-                                       choices = resultado$records$Mes
+                                       choices = resultado$Nombre.Mes
                                        
       )
       
