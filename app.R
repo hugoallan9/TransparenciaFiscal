@@ -19,7 +19,13 @@ web()
 
 data <- read.csv('Alimentación_para_Transparencia_Fiscal.csv')
 
+nombres.meses <- c("ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
+                   "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
 
+current_year <- format(Sys.Date(), "%Y")
+
+
+data <- data[ which(data$Ejercicio == current_year), ]
 
 categorias <- levels( data$Entidad )
   
@@ -83,14 +89,14 @@ server <- function(input, output, session) {
                                        
       )
     }else if(input$Opcion == 3){
-      # consulta_sql = paste0('select distinct "Mes", "Entidad" from "',
-      #                       id_ejecucion, '" where "Entidad" = \'', input$Entidad , "\'")
-      # resultado <- ds_search_sql(consulta_sql, as = 'table')
       resultado <- data %>%
         distinct( Entidad, Nombre.Mes ) %>%
         filter( Entidad == input$Entidad )
+      factor( resultado$Nombre.Mes, levels = nombres.meses)
+      #levels( resultado$Nombre.Mes ) <- nombres.meses
+      meses <- factor( as.character( resultado$Nombre.Mes ), levels = nombres.meses) 
       mostrable <-  checkboxGroupInput("meses", h5("Seleccione las unidades ejecutoras de su interés:"),
-                                       choices = resultado$Nombre.Mes
+                                       choices = sort(meses) 
                                        
       )
       
@@ -119,23 +125,30 @@ server <- function(input, output, session) {
     if(input$Opcion == 1){
       consulta_sql = "select"
     }else if( input$Opcion == 2 ){
-      print( inputParaelIn( input$programas ) )
-      consulta_sql = paste0('select "Programa", "Entidad", sum("Devengado") as "Devengado" from  "', id_ejecucion, '" where "Entidad" = \'', input$Entidad,
-      '\' and "Programa" in (',inputParaelIn(input$programas), ') group by "Programa", "Entidad"' )
-      print(consulta_sql)
-      resultado <- ds_search_sql(consulta_sql, as = 'table')
+      print( is.vector(inputParaelIn( input$programas )) )
+       print( inputParaelIn( input$programas ) )
+      # consulta_sql = paste0('select "Programa", "Entidad", sum("Devengado") as "Devengado" from  "', id_ejecucion, '" where "Entidad" = \'', input$Entidad,
+      # '\' and "Programa" in (',inputParaelIn(input$programas), ') group by "Programa", "Entidad"' )
+      # print(consulta_sql)
+      # resultado <- ds_search_sql(consulta_sql, as = 'table')
+      # print(resultado)
+      resultado <- data %>%
+        select(Programa, Devengado, Entidad) %>%
+        filter(Entidad == input$Entidad, Programa %in% input$programas   ) %>%
+        group_by(Programa) %>%
+        summarise( Devengado = sum(Devengado) )
       print(resultado)
     }else if( input$Opcion == 3 ){
       
     }
-    return(resultado$records)
+    return(resultado)
     
   })
   
   output$distPlot <- renderPlot({
     data<- retardo()
-    data[,3] <- sapply(data[,3], as.numeric)
-    g <- graficaCol(data[,c(2,3)])
+    data[,2] <- sapply(data[,2], as.numeric)
+    g <- graficaCol(data)
     g <- etiquetasHorizontales(g)
     return(retocarGrafica(g))
   })
