@@ -123,15 +123,12 @@ server <- function(input, output, session) {
     #Acá va la consulta.
     consulta_sql = ""
     if(input$Opcion == 1){
-      consulta_sql = "select"
+      resultado <- data %>%
+        select( Unidad.Ejecutora, Devengado, Entidad) %>%
+        filter(Entidad == input$Entidad, Unidad.Ejecutora %in% input$unidadesEjecutoras   ) %>%
+        group_by( Unidad.Ejecutora ) %>%
+        summarise( Devengado = sum(Devengado) )
     }else if( input$Opcion == 2 ){
-      print( is.vector(inputParaelIn( input$programas )) )
-       print( inputParaelIn( input$programas ) )
-      # consulta_sql = paste0('select "Programa", "Entidad", sum("Devengado") as "Devengado" from  "', id_ejecucion, '" where "Entidad" = \'', input$Entidad,
-      # '\' and "Programa" in (',inputParaelIn(input$programas), ') group by "Programa", "Entidad"' )
-      # print(consulta_sql)
-      # resultado <- ds_search_sql(consulta_sql, as = 'table')
-      # print(resultado)
       resultado <- data %>%
         select(Programa, Devengado, Entidad) %>%
         filter(Entidad == input$Entidad, Programa %in% input$programas   ) %>%
@@ -139,7 +136,11 @@ server <- function(input, output, session) {
         summarise( Devengado = sum(Devengado) )
       print(resultado)
     }else if( input$Opcion == 3 ){
-      
+      resultado <- data %>%
+        select( Nombre.Mes, Devengado, Entidad) %>%
+        filter(Entidad == input$Entidad, Nombre.Mes  %in% input$meses   ) %>%
+        group_by( Nombre.Mes ) %>%
+        summarise( Devengado = sum(Devengado) )
     }
     return(resultado)
     
